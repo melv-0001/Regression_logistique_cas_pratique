@@ -1,0 +1,99 @@
+# ========================================
+# 📊 Classification binaire : Croissance de population en Côte d'Ivoire
+# Objectif : prédire si une région connaît une croissance rapide (1) ou normale (0)
+# ========================================
+
+# ✅ 1. Importation des bibliothèques nécessaires
+import numpy as np                # Pour les calculs numériques
+import pandas as pd              # Pour manipuler les tableaux de données (DataFrames)
+from sklearn.model_selection import train_test_split  # Pour diviser les données en train/test
+from sklearn.linear_model import LogisticRegression   # Modèle de régression logistique
+from sklearn.metrics import (    # Outils pour évaluer les performances du modèle
+    confusion_matrix, accuracy_score, precision_score,
+    recall_score, f1_score, roc_curve, auc
+)
+import matplotlib.pyplot as plt  # Pour les graphiques
+import seaborn as sns            # Pour des graphiques plus esthétiques (ex: heatmap)
+
+# ✅ 2. Génération de données simulées (fictives mais réalistes)
+
+# On fixe une graine aléatoire pour avoir toujours les mêmes résultats
+np.random.seed(0)
+
+# Nombre d'observations (régions ou localités en Côte d’Ivoire par exemple)
+n = 200
+
+# Création de 4 variables indépendantes avec des valeurs réalistes
+X = pd.DataFrame({
+    'taux_natalite': np.random.normal(35, 5, n),           # Moyenne = 35 naissances / 1000 hab
+    'migration_nette': np.random.normal(2, 3, n),          # Entrée/sortie de population
+    'taux_alphabetisation': np.random.normal(60, 10, n),   # En pourcentage (%)
+    'urbanisation': np.random.normal(50, 15, n)            # Taux d’urbanisation en %
+})
+
+# ✅ 3. Génération de la variable cible `y` (croissance rapide = 1 / normale = 0)
+# Hypothèse : une région avec une forte natalité (>37) et faible alphabétisation (<65) → croissance rapide
+y = ((X['taux_natalite'] > 37) & (X['taux_alphabetisation'] < 65)).astype(int)
+
+# ✅ 4. Division des données en train (70%) et test (30%)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# ✅ 5. Création et entraînement du modèle de classification
+model = LogisticRegression()      # On choisit une régression logistique (modèle binaire)
+model.fit(X_train, y_train)       # Entraînement sur les données d’apprentissage
+
+# ✅ 6. Prédiction sur les données de test
+y_pred = model.predict(X_test)                  # Classe prédite (0 ou 1)
+y_proba = model.predict_proba(X_test)[:, 1]     # Probabilité d’appartenir à la classe 1 (croissance rapide)
+
+# ✅ 7. Évaluation des performances du modèle
+
+# Matrice de confusion : compare les vrais résultats aux prédictions
+conf_mat = confusion_matrix(y_test, y_pred)
+
+# Accuracy : proportion de bonnes prédictions
+accuracy = accuracy_score(y_test, y_pred)
+
+# Précision : parmi les "croissances rapides" prédites, combien sont correctes ?
+precision = precision_score(y_test, y_pred)
+
+# Rappel : parmi les vraies croissances rapides, combien sont détectées ?
+recall = recall_score(y_test, y_pred)
+
+# F1-score : moyenne harmonique entre précision et rappel
+f1 = f1_score(y_test, y_pred)
+
+# ✅ 8. Affichage des métriques dans la console
+print("📊 Matrice de confusion :\n", conf_mat)
+print(f"\n🎯 Exactitude (Accuracy) : {accuracy:.2f}")
+print(f"✅ Précision : {precision:.2f}")
+print(f"🔁 Rappel : {recall:.2f}")
+print(f"📌 F1-score : {f1:.2f}")
+
+# ✅ 9. Calcul des données pour la courbe ROC
+# ROC : montre comment le modèle sépare les classes à différents seuils
+fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+roc_auc = auc(fpr, tpr)  # AUC = Aire sous la courbe ROC (entre 0.5 et 1.0)
+
+# ✅ 10. Affichage graphique (visualisation des résultats)
+plt.figure(figsize=(12, 5))  # Taille de la figure
+
+# 🎨 Sous-graphique 1 : Matrice de confusion
+plt.subplot(1, 2, 1)
+sns.heatmap(conf_mat, annot=True, fmt='d', cmap="Blues")
+plt.title("Matrice de confusion")
+plt.xlabel("Valeurs Prédites")
+plt.ylabel("Valeurs Réelles")
+
+# 🎨 Sous-graphique 2 : Courbe ROC
+plt.subplot(1, 2, 2)
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f"AUC = {roc_auc:.2f}")
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')  # Diagonale (modèle aléatoire)
+plt.title("Courbe ROC")
+plt.xlabel("Taux de Faux Positifs (FPR)")
+plt.ylabel("Taux de Vrais Positifs (TPR)")
+plt.legend(loc="lower right")
+plt.grid(True)
+
+plt.tight_layout()  # Ajuste l’espacement entre les sous-graphiques
+plt.show()          # Affiche la figure complète
